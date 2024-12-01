@@ -1,0 +1,31 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: homework-ingressroute
+  namespace: homework
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`homework.otus`) && PathPrefix(`/homepage`)
+      kind: Rule
+      services:
+        - name: homework-service
+          port: 80
+      middlewares:
+        - name: rewrite-homepage
+    - match: Host(`homework.otus`) && PathPrefix(`/`)
+      kind: Rule
+      services:
+        - name: homework-service
+          port: 80
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: rewrite-homepage
+  namespace: homework
+spec:
+  replacePathRegex:
+    regex: "^/homepage(.*)"
+    replacement: "/index.html"
