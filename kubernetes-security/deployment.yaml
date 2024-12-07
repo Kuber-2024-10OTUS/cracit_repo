@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homework-deployment
+  namespace: homework
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: homework-app
+  template:
+    metadata:
+      labels:
+        app: homework-app
+    spec:
+      serviceAccountName: monitoring
+      volumes:
+      - name: shared-volume
+        emptyDir: {}
+      initContainers:
+      - name: fetch-metrics
+        image: curlimages/curl:latest
+        command: ["sh", "-c"]
+        args:
+          - |
+            curl -s https://kubernetes.default.svc/api/v1/nodes --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+            -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" > /data/metrics.html \
+            || echo "Failed to fetch metrics";
+        volumeMounts:
+        - name: shared-volume
+          mountPath: /data
+      containers:
+      - name: main-container
+        image: nginx:latest
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - name: shared-volume
+          mountPath: /usr/share/nginx/html
+        readinessProbe:
+          httpGet:
+            path: /metrics.html
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo 'server {
+            listen 8000;
+            root /usr/share/nginx/html;
+            index index.html;
+          }' > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;';
