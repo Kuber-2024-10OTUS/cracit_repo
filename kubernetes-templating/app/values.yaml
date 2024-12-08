@@ -1,0 +1,28 @@
+namespace: homework
+
+replicaCount: 3
+
+image:
+  repository: nginx
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+ingress:
+  enabled: true
+  host: homework.otus
+  path: /homepage
+
+probes:
+  readiness:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+serviceAccount:
+  create: true
+  name: monitoring
